@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js editor</title>
+		<link rel="stylesheet" type="text/css" href="style.css" media="all">
+	</head>
+	<body>
+		<script src="../../build/three.min.js"></script>
+		<script src="../js/controls/TrackballControls.js"></script>
+
+		<script src="js/libs/signals.min.js"></script>
+
+		<script src="js/UI.js"></script>
+		<script src="js/UI.three.js"></script>
+		<script src="js/ui/Sidebar.js"></script>
+		<script src="js/ui/Sidebar.Scene.js"></script>
+		<script src="js/ui/Sidebar.Object3D.js"></script>
+		<script src="js/ui/Viewport.js"></script>
+
+		<script>
+			window.URL = window.URL || window.webkitURL;
+			window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
+
+			var SIGNALS = signals;
+
+			var signals = {
+				// notifications
+				sceneChanged: new SIGNALS.Signal(),
+				objectAdded: new SIGNALS.Signal(),
+				objectSelected: new SIGNALS.Signal(),
+				objectChanged: new SIGNALS.Signal(),
+				cameraChanged: new SIGNALS.Signal(),
+				windowResize: new SIGNALS.Signal()
+			};
+
+			//
+			var viewport = new Viewport(signals);
+			viewport.setTop("0px");
+			viewport.setLeft("0px");
+			viewport.setRight("300px");
+			viewport.setBottom("0px");
+			document.body.appendChild(viewport.dom);
+
+			var sidebar = new Sidebar(signals);
+			sidebar.setRight("0px");
+			sidebar.setTop("0px");
+			sidebar.setBottom("0px");
+			document.body.appendChild(sidebar.dom);
+
+			//
+			var onWindowResize = function (event) {
+				signals.windowResize.dispatch();
+			};
+
+			//
+			onWindowResize();
+
+			window.addEventListener("resize", onWindowResize, false);
+			
+			////////////////////////////////////////////////////////////////////////
+			// block 1
+			var pts = [];
+			pts.push(new THREE.Vector3(0, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 200));
+			pts.push(new THREE.Vector3(100, 0, 200));
+			pts.push(new THREE.Vector3(200, 0, 100));
+			pts.push(new THREE.Vector3(200, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 0));
+			
+			var block1 = addBlock(pts, 0, 0, 10, 4, 10, 20);
+			addLot(20, 20, 40, 40, Math.PI/2, block1);
+			addLot(20, 60, 40, 40, Math.PI/2, block1);
+			addLot(70, 40, 60, 80, 0, block1);
+			addLot(50, 110, 60, 100, Math.PI/2, block1);
+			signals.objectChanged.dispatch(block1);
+
+			////////////////////////////////////////////////////////////////////////
+			// block 2
+			var pts = [];
+			pts.push(new THREE.Vector3(0, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 100));
+			pts.push(new THREE.Vector3(200, 0, 100));
+			pts.push(new THREE.Vector3(200, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 0));
+			
+			var block2 = addBlock(pts, 0, -120, 10, 4, 10, 20);
+			addLot(30, 30, 60, 60, 0, block2);
+			addLot(30, 80, 60, 40, Math.PI, block2);
+			addLot(90, 30, 60, 60, 0, block2);
+			addLot(90, 80, 60, 40, Math.PI, block2);
+			addLot(140, 30, 40, 60, 0, block2);
+			addLot(140, 80, 40, 40, Math.PI, block2);
+			addLot(180, 30, 40, 60, 0, block2);
+			addLot(180, 80, 40, 40, Math.PI, block2);
+			
+			signals.objectChanged.dispatch(block2);
+
+			////////////////////////////////////////////////////////////////////////
+			// block 3
+			var pts = [];
+			pts.push(new THREE.Vector3(0, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 100));
+			pts.push(new THREE.Vector3(200, 0, 100));
+			pts.push(new THREE.Vector3(200, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 0));
+			
+			var block3 = addBlock(pts, -220, 0, 10, 4, 10, 20);
+			addLot(30, 30, 60, 60, 0, block3);
+			addLot(30, 80, 60, 40, Math.PI, block3);
+			addLot(130, 50, 140, 100, 0, block3);
+			
+			signals.objectChanged.dispatch(block3);
+			
+			////////////////////////////////////////////////////////////////////////
+			// block 4
+			var pts = [];
+			pts.push(new THREE.Vector3(0, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 100));
+			pts.push(new THREE.Vector3(200, 0, 100));
+			pts.push(new THREE.Vector3(200, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 0));
+			
+			var block4 = addBlock(pts, -220, -120, 10, 4, 10, 20);
+			addLot(25, 25, 50, 50, 0, block4);
+			addLot(25, 75, 50, 50, Math.PI, block4);
+			addLot(75, 25, 50, 50, 0, block4);
+			addLot(75, 75, 50, 50, Math.PI, block4);
+			addLot(125, 25, 50, 50, 0, block4);
+			addLot(125, 75, 50, 50, Math.PI, block4);
+			addLot(175, 25, 50, 50, 0, block4);
+			addLot(175, 75, 50, 50, Math.PI, block4);
+			
+			signals.objectChanged.dispatch(block4);
+			
+			////////////////////////////////////////////////////////////////////////
+			// block 5
+			var pts = [];
+			pts.push(new THREE.Vector3(0, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 100));
+			pts.push(new THREE.Vector3(200, 0, 100));
+			pts.push(new THREE.Vector3(200, 0, 0));
+			pts.push(new THREE.Vector3(0, 0, 0));
+			
+			var block4 = addBlock(pts, -220, 120, 10, 4, 10, 20);
+			addLot(25, 25, 50, 50, 0, block4);
+			addLot(25, 75, 50, 50, Math.PI, block4);
+			addLot(75, 25, 50, 50, 0, block4);
+			addLot(75, 75, 50, 50, Math.PI, block4);
+			addLot(125, 25, 50, 50, 0, block4);
+			addLot(125, 75, 50, 50, Math.PI, block4);
+			addLot(175, 25, 50, 50, 0, block4);
+			addLot(175, 75, 50, 50, Math.PI, block4);
+			
+			signals.objectChanged.dispatch(block4);
+
+			/**
+			 * Create a polygon geometry from points
+			 */
+			function createGeometry(points) {
+				var geometry = new THREE.Geometry();
+				var normal = new THREE.Vector3(0, 1, 0);
+				
+				for (var i = 0; i < points.length; i++) {
+					geometry.vertices.push(points[i]);
+				}
+				for (var i = 1; i < points.length - 1; i++) {
+					var face = new THREE.Face3(0, i, i+1);
+					face.normal.copy(normal);
+					face.vertexNormals.push(normal.clone(), normal.clone(), normal.clone());
+					geometry.faces.push(face);
+				}
+				
+				return geometry;
+			}
+			
+			/**
+			 * Create a mesh from geometry and material
+			 */
+			function createMesh(geometry, material, type, x, z) {
+				var mesh = new THREE.Mesh(geometry, material);
+				mesh.name = type + " " + mesh.id;
+				mesh.fbc_type = type;
+				mesh.position.set(x, 0, z);
+				
+				signals.objectAdded.dispatch(mesh);
+				
+				return mesh;
+			}
+
+			function addBuilding(parent) {
+				var widthSegments = 1;
+				var heightSegments = 1;
+				var depthSegments = 1;
+
+				var geometry = new THREE.CubeGeometry(1, 1, 1, 1, 1, 1);
+				geometry.name = 'Building ' + geometry.id;
+
+				var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color: 0xffffff}));
+				mesh.name = "Building " + mesh.id;
+				mesh.fbc_type = "Building";
+				mesh.fbc_width = parent.fbc_width;
+				mesh.fbc_depth = parent.fbc_depth;
+				mesh.fbc_f = parent.fbc_f;
+				mesh.fbc_s = parent.fbc_s;
+				mesh.fbc_r = parent.fbc_r;
+				mesh.fbc_h = parent.fbc_h;
+				
+				var width = parent.fbc_width - mesh.fbc_s * 2;
+				var depth = parent.fbc_depth - mesh.fbc_f - mesh.fbc_r;
+				
+				mesh.scale.set(width, mesh.fbc_h, depth);
+				//mesh.position.set(mesh.fbc_s + width/2 - mesh.fbc_width/2, mesh.fbc_h/2, mesh.fbc_f + depth/2 - mesh.fbc_depth/2);
+				mesh.position.set(0, mesh.fbc_h/2, mesh.fbc_f + depth/2 - mesh.fbc_depth/2);
+				parent.add(mesh);
+				
+				// create a road in front of the house
+				var pts = [];
+				pts.push(new THREE.Vector3(-2, 0, 0));
+				pts.push(new THREE.Vector3(2, 0, 0));
+				pts.push(new THREE.Vector3(2, 0, -mesh.fbc_depth/2));
+				pts.push(new THREE.Vector3(-2, 0, -mesh.fbc_depth/2));
+				pts.push(new THREE.Vector3(-2, 0, 0));
+				
+				var front_road_mesh = new THREE.Mesh(createGeometry(pts), new THREE.MeshPhongMaterial({color: 0xdfdfdf}));
+				front_road_mesh.position.set(0, 0.2, 0);
+				parent.add(front_road_mesh);
+			}
+			
+			function addBlock(points, x, z, f, s, r, h) {
+				var geometry = createGeometry(points);
+				
+				var mesh = createMesh(geometry, new THREE.MeshBasicMaterial({color: 0xa0c878}), "Block", x, z);
+				mesh.fbc_f = f;
+				mesh.fbc_s = s;
+				mesh.fbc_r = r;
+				mesh.fbc_h = h;
+				return mesh;
+			}
+			
+			function addLot(x, z, width, depth, ry, parent) {
+				var pts = [];
+				pts.push(new THREE.Vector3(-width/2, 0, -depth/2));
+				pts.push(new THREE.Vector3(-width/2, 0, depth/2));
+				pts.push(new THREE.Vector3(width/2, 0, depth/2));
+				pts.push(new THREE.Vector3(width/2, 0, -depth/2));
+				pts.push(new THREE.Vector3(-width/2, 0, -depth/2));
+				var geometry = createGeometry(pts);
+				var mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 0xa0c878}));
+				mesh.name = "Lot " + mesh.id;
+				mesh.fbc_type = "Lot";
+				mesh.rotation.y = ry;
+				mesh.position.set(x, 0, z);
+				mesh.fbc_width = width;
+				mesh.fbc_depth = depth;
+				mesh.fbc_f = parent.fbc_f;
+				mesh.fbc_s = parent.fbc_s;
+				mesh.fbc_r = parent.fbc_r;
+				mesh.fbc_h = parent.fbc_h;
+				parent.add(mesh);
+				
+				addBuilding(mesh);
+				
+				return mesh;
+			}
+		</script>
+	</body>
+</html>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Urban 3D visualization</title>
+		<meta charset="utf-8">
+		<style>
+			body {
+				background-color: #000000;
+				color:#ffffff;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				color: #ffff00;
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info">Urban 3D visualization</div>
+		
+		<script src="../build/three.min.js"></script>
+		<script src="js/RequestAnimationFrame.js"></script>
+		<script src="js/Detector.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+		<script src="js/controls/TrackballControls.js"></script>
+
+		<script>
+			var container, stats;
+			var camera, controls, scene, renderer;
+			var city;
+			var texture;
+			var texWindows = [];
+			var rot = 0;
+			
+			var numWindowTypes = 6;
+			var windowObjs = [];
+			for (var i = 0; i < numWindowTypes; i++) {
+				windowObjs[i] = new THREE.Geometry();
+			}
+			var buildingObjs = new THREE.Geometry();
+			var roofObjs = new THREE.Geometry();
+			var blockObjs = new THREE.Geometry();
+			var blockObjs2 = new THREE.Geometry();
+			
+			var buildingGeo = new THREE.CubeGeometry(1, 1, 1);
+			var buildingMat = new THREE.MeshNormalMaterial();
+			var windowGeo = new THREE.PlaneGeometry(2, 1, 1, 1);
+			var windowMat = new THREE.MeshNormalMaterial();
+			
+			/**
+			 * constructor of class Building
+			 */
+			function Building(x, z, width, height, depth) {
+				this.x = x;
+				this.z = z;
+				this.width = width;
+				this.height = (height > 260) ? 260 : height;
+				this.depth = depth;
+				
+				this.build();
+			}
+			
+			/**
+			* draw a building
+			*/
+			Building.prototype.build = function () {
+				var mesh = new THREE.Mesh(buildingGeo, buildingMat);
+				mesh.position.x = this.x + this.width / 2;
+				mesh.position.y = this.height / 2;
+				mesh.position.z = this.z + this.depth / 2;
+				mesh.scale.x = this.width;
+				mesh.scale.y = this.height;
+				mesh.scale.z = this.depth;
+				THREE.GeometryUtils.merge(buildingObjs, mesh);
+				
+				mesh = new THREE.Mesh(buildingGeo, buildingMat);
+				mesh.position.x = this.x + this.width / 2;
+				mesh.position.y = this.height + 2;
+				mesh.position.z = this.z + this.depth / 2;
+				mesh.scale.x = this.width;
+				mesh.scale.y = 2;
+				mesh.scale.z = this.depth;
+				THREE.GeometryUtils.merge(roofObjs, mesh);
+				
+				// build windows
+				for (var y = 1; y < this.height-2; y+=3) {
+					for (var x = 1; x < this.width-2; x+=3) {
+						if (Math.random() * 10 < 5) continue;
+						
+						var type = ~~(Math.random() * 6);
+						mesh = new THREE.Mesh(windowGeo, windowMat);
+						mesh.rotation.x = -3.1415;
+						mesh.position.x = this.x + x + 1;
+						mesh.position.y = y;
+						mesh.position.z = this.z - 0.1;
+						THREE.GeometryUtils.merge(windowObjs[type], mesh);
+
+						mesh = new THREE.Mesh(windowGeo, windowMat);
+						mesh.position.x = this.x + x + 1;
+						mesh.position.y = y;
+						mesh.position.z = this.z + this.depth + 0.1;
+						THREE.GeometryUtils.merge(windowObjs[type], mesh);
+					}
+					
+					for (var z = 1; z < this.depth-2; z+=3) {
+						if (Math.random() * 10 < 5) continue;
+						
+						var type = ~~(Math.random() * 6);
+						mesh = new THREE.Mesh(windowGeo, windowMat);
+						mesh.rotation.y = -3.1415 / 2;
+						mesh.position.x = this.x - 0.1;
+						mesh.position.y = y;
+						mesh.position.z = this.z + z + 1;
+						THREE.GeometryUtils.merge(windowObjs[type], mesh);
+
+						mesh = new THREE.Mesh(windowGeo, windowMat);
+						mesh.rotation.y = 3.1415 / 2;
+						mesh.position.x = this.x + this.width + 0.1;
+						mesh.position.y = y;
+						mesh.position.z = this.z + z + 1;
+						THREE.GeometryUtils.merge(windowObjs[type], mesh);
+					}
+				}
+			}
+			
+			/**
+			 * constructor of class Block
+			 */
+			function Block(x, z, width, maxHeight, depth) {
+				this.x = x;
+				this.z = z;
+				this.width = width;
+				this.maxHeight = maxHeight;
+				this.depth = depth;
+				this.blocks = [];
+				
+				this.build();
+			}
+			
+			/**
+			 * build a block
+			 */
+			Block.prototype.build = function () {
+				var mesh;
+				
+				// build road lamps
+				for (var x = 0; x < this.width; x+=10) {
+					var geometry2 = new THREE.CubeGeometry(10, 50, 10);
+					var material2 = new THREE.MeshBasicMaterial({color: 0xffffff});
+					var mesh2 = new THREE.Mesh(geometry2, material2);
+					mesh2.position.x = this.x + x;
+					mesh2.position.y = this.y + 12.5;
+					mesh2.position.z = this.z + z;
+					THREE.GeometryUtils.merge(blockObjs2, mesh2);
+
+					mesh2 = new THREE.Mesh(geometry2, material2);
+					mesh2.position.x = this.x + x;
+					mesh2.position.y = this.y + 12.5;
+					mesh2.position.z = this.z + z + this.depth;
+					THREE.GeometryUtils.merge(blockObjs2, mesh2);
+
+
+					var geometry = new THREE.PlaneGeometry(1, 1, 1, 1);
+					var material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
+					
+					mesh = new THREE.Mesh(geometry, material);
+					mesh.rotation.x = -3.1415 / 2.0;
+					mesh.position.x = this.x + x;
+					mesh.position.y = 0.1;
+					mesh.position.z = this.z;
+					THREE.GeometryUtils.merge(blockObjs, mesh);
+
+					mesh = new THREE.Mesh(geometry, material);
+					mesh.rotation.x = -3.1415 / 2.0;
+					mesh.position.x = this.x + x;
+					mesh.position.y = 0.1;
+					mesh.position.z = this.z + this.depth;
+					THREE.GeometryUtils.merge(blockObjs, mesh);
+				}
+				for (var z = 0; z <= this.depth; z+=10) {
+					var geometry = new THREE.PlaneGeometry(1, 1, 1, 1);
+					var material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
+					
+					mesh = new THREE.Mesh(geometry, material);
+					mesh.rotation.x = -3.1415 / 2.0;
+					mesh.position.x = this.x;
+					mesh.position.y = 0.1;
+					mesh.position.z = this.z + z;
+					THREE.GeometryUtils.merge(blockObjs, mesh);
+
+					mesh = new THREE.Mesh(geometry, material);
+					mesh.rotation.x = -3.1415 / 2.0;
+					mesh.position.x = this.x + this.width;
+					mesh.position.y = 0.1;
+					mesh.position.z = this.z + z;
+					THREE.GeometryUtils.merge(blockObjs, mesh);
+				}
+				
+				// build buildings
+				if (this.maxHeight > 10) {
+					for (var z = 4; z < this.depth; z+=44) {
+						for (var x = 4; x < this.width; x+=44) {
+							this.blocks.push(new Building(this.x + x, this.z + z, 38, Math.random() * this.maxHeight + 20, 38));
+						}
+					}
+				} else if (this.maxHeight > 5) {
+					for (var z = 4; z < this.depth; z+=30) {
+						for (var x = 4; x < this.width; x+=30) {
+							this.blocks.push(new Building(this.x + x, this.z + z, 22, Math.random() * this.maxHeight + 20, 22));
+						}
+					}
+				} else {
+					for (var z = 7; z < this.depth; z+=21) {
+						for (var x = 7; x < this.width; x+=21) {
+							if (Math.random() * 4 < 1) continue;
+							this.blocks.push(new Building(this.x + x, this.z + z, 13, Math.random() * this.maxHeight + 20, 13));
+						}
+					}
+				}
+			}
+			
+			/**
+			 * constructor of class City
+			 */
+			function City(width, height, depth) {
+				this.width = width;
+				this.height = height;
+				this.depth = depth;
+				this.blocks = [];
+				
+				this.build();
+				
+				// group all road lamps
+				var group = new THREE.Mesh(blockObjs, new THREE.MeshNormalMaterial());
+				group.matrixAutoUpdate = false;
+				group.updateMatrix();
+				scene.add(group);
+
+				group = new THREE.Mesh(blockObjs2, new THREE.MeshBasicMaterial({color: 0xffffff}));
+				group.matrixAutoUpdate = false;
+				group.updateMatrix();
+				scene.add(group);
+				
+				// group all buildings
+				group = new THREE.Mesh(buildingObjs, new THREE.MeshBasicMaterial({color: 0x020202}));
+				group.matrixAutoUpdate = false;
+				group.updateMatrix();
+				scene.add(group);
+
+				// group all roofs
+				group = new THREE.Mesh(roofObjs, new THREE.MeshBasicMaterial({color: 0x020202}));
+				group.matrixAutoUpdate = false;
+				group.updateMatrix();
+				scene.add(group);
+				
+				// group all windows
+				for (var i = 0; i < numWindowTypes; i++) {
+					group = new THREE.Mesh(windowObjs[i], new THREE.MeshBasicMaterial({map: texWindows[i]}));
+					group.matrixAutoUpdate = false;
+					group.updateMatrix();
+					scene.add(group);
+				}
+			}
+			
+			/**
+			* build a city
+			*/
+			City.prototype.build = function () {
+				// load window textures
+				for (var i = 0; i < numWindowTypes; i++) {
+					texWindows[i] = THREE.ImageUtils.loadTexture("window0" + i + ".gif");
+					texWindows[i].anisotropy = renderer.getMaxAnisotropy();
+				}
+
+				// load sky texture
+				texSky = THREE.ImageUtils.loadTexture("sky.jpg");
+				texSky.anisotropy = renderer.getMaxAnisotropy();
+				var skyGeo = new THREE.PlaneGeometry(this.width, this.height, 1, 1);
+				var skyMesh = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({map: texSky}));
+				skyMesh.position.y = this.height/2;
+				skyMesh.position.z = -this.depth/2;
+				scene.add(skyMesh);
+
+				skyMesh = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({map: texSky}));
+				skyMesh.rotation.y = 3.1415 / 2;
+				skyMesh.position.x = -this.width/2;
+				skyMesh.position.y = this.height/2;
+				scene.add(skyMesh);
+
+				skyMesh = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({map: texSky}));
+				skyMesh.rotation.y = -3.1415 / 2;
+				skyMesh.position.x = this.width/2;
+				skyMesh.position.y = this.height/2;
+				scene.add(skyMesh);
+
+				skyMesh = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({map: texSky}));
+				skyMesh.rotation.y = 3.1415;
+				skyMesh.position.z = this.depth/2;
+				skyMesh.position.y = this.height/2;
+				scene.add(skyMesh);
+				
+				// create ground surface
+				var geometry = new THREE.PlaneGeometry(this.width, this.depth, 1, 1);
+				mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 0x000000}));
+				mesh.rotation.x = -3.1415 / 2.0;
+				scene.add(mesh);
+				
+				// build blocks
+				var normalize_factor = 1 / Math.sqrt(this.width * this.width + this.depth * this.depth);
+				for (var z = 0; z < this.depth; z+=100) {
+					for (var x = 0; x < this.width; x+=100) {
+						var rr = Math.sqrt((x - this.width/2) * (x - this.width/2) + (z - this.depth/2) * (z - this.depth/2)) * normalize_factor;
+						var sigma = 0.06;
+						var maxHeight = 50 * Math.exp(-rr * rr / 2 / sigma / sigma) / Math.sqrt(2 * 3.14 * sigma * sigma) + 4;
+						this.blocks.push(new Block(x + 5 - this.width/2, z + 5 - this.depth/2, 90, maxHeight, 90));
+					}
+				}
+			}
+
+			init();
+			animate();
+
+			function init() {
+				container = document.getElementById( 'container' );
+
+				// camera
+				camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 20000);
+				camera.position.y = 300;
+				camera.position.z = 700;
+
+				controls = new THREE.TrackballControls( camera );
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.8;
+				controls.noZoom = false;
+				controls.noPan = false;
+				controls.staticMoving = true;
+				controls.dynamicDampingFactor = 0.3;
+				controls.keys = [ 65, 83, 68 ];
+				controls.addEventListener('change', render);
+				
+				// renderer
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild(renderer.domElement);
+				
+				// stats info
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				container.appendChild( stats.domElement );
+
+				// scene
+				scene = new THREE.Scene();
+
+				city = new City(1400, 2000, 1400);
+
+				// resize event
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				controls.handleResize();
+
+				render();
+
+			}
+			
+			function animate() {
+				requestAnimationFrame( animate );
+				controls.update();
+				render();
+			}
+			
+			function render() {
+				renderer.render( scene, camera );
+				stats.update();
+			}
+		</script>
+	</body>
+</html>
