@@ -28,6 +28,7 @@
 		<script src="three.min.js"></script>
 		<script src="js/renderers/Projector.js"></script>
 		<script src="js/renderers/CanvasRenderer.js"></script>
+		<script src="js/controls/TrackballControls.js"></script>
 		<script src="js/libs/dat.gui.min.js"></script>
 		<script src="gui.js"></script>
 		<script>
@@ -41,18 +42,16 @@
 			var gui;
 			var zone_type = 0;
 			var dragging = false;
+			var isShiftDown = false;
 			
 			init();
-			render();
+			animate();
 			
 			function init() {
 				var gui = new ZoningGUI();
 				
 				container = document.getElementById( 'container' );
 				
-				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
-				camera.position.set(0, 900, 1000);
-
 				scene = new THREE.Scene();
 				raycaster = new THREE.Raycaster();
 				zone_type = 0;
@@ -95,11 +94,26 @@
 				renderer.setSize(window.innerWidth, window.innerHeight);
 				container.appendChild(renderer.domElement);
 				
-				document.addEventListener('mousedown', onDocumentMouseDown, false);
-				document.addEventListener('mousemove', onDocumentMouseMove, false);
-				document.addEventListener('mouseup', onDocumentMouseUp, false);
+				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
+				camera.position.set(0, 900, 1000);
+				camera.lookAt(new THREE.Vector3());
+				
+				// create trackball
+				controls = new THREE.TrackballControls(camera, renderer.domElement);
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.2;
+				controls.addEventListener( 'change', render );
+				
+				renderer.domElement.addEventListener('mousedown', onDocumentMouseDown, false);
+				renderer.domElement.addEventListener('mousemove', onDocumentMouseMove, false);
+				renderer.domElement.addEventListener('mouseup', onDocumentMouseUp, false);
+				document.addEventListener('keydown', onDocumentKeyDown, false);
+				document.addEventListener('keyup', onDocumentKeyUp, false);
 				window.addEventListener('resize', onWindowResize, false);
 				window.addEventListener('zone_type_changed', onZoneTypeChanged);
+				
+				render();
 			}
 
 			function onWindowResize() {
@@ -111,6 +125,8 @@
 			}
 
 			function onDocumentMouseDown(event) {
+				if (!isShiftDown) return;
+				
 				mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
 				mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
 
@@ -132,9 +148,9 @@
 				mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
 				mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
 
-				raycaster.setFromCamera( mouse, camera );
+				raycaster.setFromCamera(mouse, camera);
 
-				var intersects = raycaster.intersectObjects( objects );
+				var intersects = raycaster.intersectObjects(objects);
 				
 				if (intersects.length > 0) {
 					intersects[0].object.material = materials[zone_type];
@@ -147,14 +163,29 @@
 				dragging = false;
 			}
 			
+			function onDocumentKeyDown(event) {
+				switch (event.keyCode) {
+					case 16: isShiftDown = true; break;
+				}
+			}
+
+			function onDocumentKeyUp(event) {
+				switch (event.keyCode) {
+					case 16: isShiftDown = false; break;
+				}
+			}
+			
 			function onZoneTypeChanged(event) {
 				zone_type = event.detail.value;
 			}
+			
+			function animate() {
+				requestAnimationFrame(animate);
+				controls.update();
+			}
 
 			function render() {
-				camera.lookAt( new THREE.Vector3() );
-
-				renderer.render( scene, camera );
+				renderer.render(scene, camera);
 			}
 		</script>
 	</body>
