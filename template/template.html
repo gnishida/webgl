@@ -68,13 +68,13 @@
 				camera.updateProjectionMatrix();
 
 				renderer.setSize( window.innerWidth, window.innerHeight );
+				render();
 			}
 
 			function onDocumentMouseMove( event ) {
-				dx = ( event.clientX - windowHalfX );
-				//dy = ( event.clientY - windowHalfY );
+				dx = event.clientX - windowHalfX;
 				
-				camera_th = dx * 0.001;
+				camera_th = -dx * 0.001;
 				camera.position.x = camera_distance * Math.sin(camera_th);
 				camera.position.z = camera_distance * Math.cos(camera_th);
 				render();
