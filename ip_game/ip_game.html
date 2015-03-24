@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Zoning</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #808080;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				background-color: #ffffff;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info">Zoning Game</div>
+		
+		<script src="three.min.js"></script>
+		<script src="js/renderers/Projector.js"></script>
+		<script src="js/renderers/CanvasRenderer.js"></script>
+		<script src="js/controls/TrackballControls.js"></script>
+		<script src="js/libs/dat.gui.min.js"></script>
+		<script src="gui.js"></script>
+		<script>
+			var container;
+			var camera, scene, renderer;
+
+			var objects = [];
+			var materials = [];
+			var mouse = new THREE.Vector2();
+			var raycaster;
+			var gui;
+			var zone_type = 0;
+			var dragging = false;
+			var isShiftDown = false;
+			
+			init();
+			animate();
+			
+			function init() {
+				var gui = new ZoningGUI();
+				
+				container = document.getElementById( 'container' );
+				
+				scene = new THREE.Scene();
+				raycaster = new THREE.Raycaster();
+				zone_type = 0;
+				
+				// materials for zoning
+				materials.push(new THREE.MeshBasicMaterial( {color: 0xff2020, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
+				materials.push(new THREE.MeshBasicMaterial( {color: 0x2020ff, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
+				materials.push(new THREE.MeshBasicMaterial( {color: 0xffff20, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
+				materials.push(new THREE.MeshBasicMaterial( {color: 0x20ff20, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
+
+				// create grid
+				var city_size = 1000, cell_size = 50, grid_size = 20;
+				for (var i = 0; i <= grid_size; ++i) {
+					for (var j = 0; j <= grid_size; ++j) {
+						var x = j * cell_size - city_size * 0.5;
+						var y = i * cell_size - city_size * 0.5;
+						
+						var geometry = new THREE.Geometry();
+						geometry.vertices.push(new THREE.Vector3(x, 0, y));
+						geometry.vertices.push(new THREE.Vector3(x + cell_size, 0, y));
+						geometry.vertices.push(new THREE.Vector3(x + cell_size, 0, y + cell_size));
+						geometry.vertices.push(new THREE.Vector3(x, 0, y + cell_size));
+						
+						geometry.faces.push(new THREE.Face3(0, 1, 2, null, null, null));
+						geometry.faces.push(new THREE.Face3(0, 2, 3, null, null, null));
+						
+						geometry.dynamic = true;
+						geometry.colorsNeedUpdate = true;
+						
+						var mesh = new THREE.Mesh(geometry, materials[3]);
+						
+						objects.push(mesh);
+						scene.add(mesh);
+					}
+				}
+				
+				renderer = new THREE.CanvasRenderer();
+				renderer.setClearColor(0xf0f0f0);
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				container.appendChild(renderer.domElement);
+				
+				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
+				camera.position.set(0, 1200, 0);
+				camera.lookAt(new THREE.Vector3());
+				
+				renderer.domElement.addEventListener('mousedown', onDocumentMouseDown, false);
+				renderer.domElement.addEventListener('mousemove', onDocumentMouseMove, false);
+				renderer.domElement.addEventListener('mouseup', onDocumentMouseUp, false);
+				window.addEventListener('resize', onWindowResize, false);
+				window.addEventListener('zone_type_changed', onZoneTypeChanged);
+				
+				render();
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				render();
+			}
+
+			function onDocumentMouseDown(event) {
+				mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
+				mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+
+				raycaster.setFromCamera( mouse, camera );
+
+				var intersects = raycaster.intersectObjects( objects );
+				
+				if (intersects.length > 0) {
+					dragging = true;
+					intersects[0].object.material = materials[zone_type];
+				}
+				
+				render();
+			}
+
+			function onDocumentMouseMove(event) {
+				if (!dragging) return;
+				
+				mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
+				mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+
+				raycaster.setFromCamera(mouse, camera);
+
+				var intersects = raycaster.intersectObjects(objects);
+				
+				if (intersects.length > 0) {
+					intersects[0].object.material = materials[zone_type];
+				}
+				
+				render();
+			}
+			
+			function onDocumentMouseUp(event) {
+				dragging = false;
+			}
+			
+			function onZoneTypeChanged(event) {
+				zone_type = event.detail.value;
+			}
+			
+			function animate() {
+				requestAnimationFrame(animate);
+			}
+
+			function render() {
+				renderer.render(scene, camera);
+			}
+		</script>
+	</body>
+</html>
