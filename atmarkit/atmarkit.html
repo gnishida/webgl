@@ -1,46 +1,150 @@
-﻿<html lang="ja">
-  <head><meta charset="UTF-8"></head>
-  <body>
-    <script src="three.min.js"></script>
-    <script>
-      // (1)レンダラの初期化
-      var renderer = new THREE.WebGLRenderer({ antialias:true });
-      renderer.setSize(500, 500);
-      //renderer.setClearColorHex(0x000000, 1);
-      document.body.appendChild(renderer.domElement);
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js canvas - geometry - earth</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #808080;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				background-color: #ffffff;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+			a {
+				color: #0080ff;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info"><a href="http://threejs.org" target="_blank">three.js</a> - earth demo</div>
 
-      // (2)シーンの作成
-      var scene = new THREE.Scene();
+		<script src="../build/three.min.js"></script>
+		<script src="js/renderers/Projector.js"></script>
+		<script src="js/renderers/CanvasRenderer.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+		<script>
+			var container, stats;
+			var camera, scene, renderer;
+			var group;
+			var mouseX = 0, mouseY = 0;
 
-      // (3)カメラの作成
-      var camera = new THREE.PerspectiveCamera(15, 500 / 500);
-      camera.position = new THREE.Vector3(0, 0, 8);
-      camera.lookAt(new THREE.Vector3(0, 0, 0));
-      scene.add(camera);
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
 
-      // (4)ライトの作成
-      var light = new THREE.DirectionalLight(0xcccccc);
-      light.position = new THREE.Vector3(0.577, 0.577, 0.577);
-      var ambient = new THREE.AmbientLight(0x333333);
-      scene.add(light);
-      scene.add(ambient);
+			init();
+			animate();
 
-      // (5)表示する物体の作成
-      var geometry = new THREE.SphereGeometry(1, 32, 16);
-      var material = new THREE.MeshPhongMaterial({
-        color: 0xffffff, specular: 0xcccccc, shininess:50, ambient: 0xffffff,
-        map: THREE.ImageUtils.loadTexture('images/earth.jpg') });
-      var mesh = new THREE.Mesh(geometry, material);
-      scene.add(mesh);
+			function init() {
+				container = document.getElementById( 'container' );
 
-      // (6)レンダリング
-      var baseTime = +new Date;
-      function render() {
-        requestAnimationFrame(render);
-        mesh.rotation.y = 0.3 * (+new Date - baseTime) / 1000;
-        renderer.render(scene, camera);
-      };
-      render();
-    </script>
-  </body>
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.position.z = 500;
+
+				scene = new THREE.Scene();
+
+				group = new THREE.Group();
+				scene.add( group );
+
+				// earth
+				var loader = new THREE.TextureLoader();
+				loader.load( 'textures/land_ocean_ice_cloud_2048.jpg', function ( texture ) {
+					var geometry = new THREE.SphereGeometry( 200, 20, 20 );
+
+					var material = new THREE.MeshBasicMaterial( { map: texture, overdraw: 0.5 } );
+					var mesh = new THREE.Mesh( geometry, material );
+					group.add( mesh );
+				} );
+
+				// shadow
+				var canvas = document.createElement( 'canvas' );
+				canvas.width = 128;
+				canvas.height = 128;
+
+				var context = canvas.getContext( '2d' );
+				var gradient = context.createRadialGradient(
+					canvas.width / 2,
+					canvas.height / 2,
+					0,
+					canvas.width / 2,
+					canvas.height / 2,
+					canvas.width / 2
+				);
+				gradient.addColorStop( 0.1, 'rgba(210,210,210,1)' );
+				gradient.addColorStop( 1, 'rgba(255,255,255,1)' );
+
+				context.fillStyle = gradient;
+				context.fillRect( 0, 0, canvas.width, canvas.height );
+
+				var texture = new THREE.Texture( canvas );
+				texture.needsUpdate = true;
+
+				var geometry = new THREE.PlaneBufferGeometry( 300, 300, 3, 3 );
+				var material = new THREE.MeshBasicMaterial( { map: texture, overdraw: 0.5 } );
+
+				var mesh = new THREE.Mesh( geometry, material );
+				mesh.position.y = - 250;
+				mesh.rotation.x = - Math.PI / 2;
+				group.add( mesh );
+
+				renderer = new THREE.CanvasRenderer();
+				renderer.setClearColor( 0xffffff );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				container.appendChild( stats.domElement );
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+				//
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function onWindowResize() {
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function onDocumentMouseMove( event ) {
+				mouseX = ( event.clientX - windowHalfX );
+				mouseY = ( event.clientY - windowHalfY );
+			}
+
+			//
+			function animate() {
+				requestAnimationFrame( animate );
+
+				render();
+				stats.update();
+			}
+
+			function render() {
+				camera.position.x += ( mouseX - camera.position.x ) * 0.05;
+				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
+				camera.lookAt( scene.position );
+
+				group.rotation.y -= 0.005;
+
+				renderer.render( scene, camera );
+			}
+		</script>
+	</body>
 </html>
