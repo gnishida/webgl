@@ -68,8 +68,10 @@
 				materials.push(new THREE.MeshBasicMaterial( {color: 0x20ff20, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
 				
 				// materials for roads
-				var texture = THREE.ImageUtils.loadTexture( 'textures/road0.png' );
-				road_materials.push(new THREE.MeshBasicMaterial( { map: texture, needsUpdate: true } ));
+				for (var i = 0; i <= 10; ++i) {
+					var texture = THREE.ImageUtils.loadTexture( 'textures/road' + i + '.png' );
+					road_materials.push(new THREE.MeshBasicMaterial( { map: texture, needsUpdate: true, side: THREE.DoubleSide } ));
+				}
 
 				// create grid
 				var city_size = 1000, cell_size = 50, grid_size = 20;
@@ -97,7 +99,6 @@
 						geometry.computeVertexNormals();
 						
 						var mesh = new THREE.Mesh(geometry, materials[3]);
-						//var mesh = new THREE.Mesh(geometry, road_materials[0]);
 						
 						objects.push(mesh);
 						scene.add(mesh);
@@ -105,7 +106,7 @@
 				}
 				
 				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
-				camera.position.set(0, 900, 0);
+				camera.position.set(0, 1200, 0);
 				camera.lookAt(new THREE.Vector3());
 				
 				renderer.domElement.addEventListener('mousedown', onDocumentMouseDown, false);
@@ -135,6 +136,7 @@
 				
 				if (intersects.length > 0) {
 					dragging = true;
+					
 					if (zone_type < 4) {
 						intersects[0].object.material = materials[zone_type];
 					} else if (zone_type == 4) {
@@ -156,7 +158,11 @@
 				var intersects = raycaster.intersectObjects(objects);
 				
 				if (intersects.length > 0) {
-					intersects[0].object.material = materials[zone_type];
+					if (zone_type < 4) {
+						intersects[0].object.material = materials[zone_type];
+					} else if (zone_type == 4) {
+						intersects[0].object.material = road_materials[0];
+					}
 				}
 				
 				render();
