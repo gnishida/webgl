@@ -9,7 +9,7 @@ function ZoningGUI() {
 
 		var zonings = controls.gui.addFolder('Zoning');
 
-		zonings.add(controls, "Zone", {Residential: 0, Commercial: 1, Industrial: 2, Park: 3}).onChange( controls.zoneChanged );
+		zonings.add(controls, "Zone", {Residential: 0, Commercial: 1, Industrial: 2, Park: 3, Road: 4}).onChange( controls.zoneChanged );
 
 		zonings.open();
 	}

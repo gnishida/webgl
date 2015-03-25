@@ -28,7 +28,6 @@
 		<script src="three.min.js"></script>
 		<script src="js/renderers/Projector.js"></script>
 		<script src="js/renderers/CanvasRenderer.js"></script>
-		<script src="js/controls/TrackballControls.js"></script>
 		<script src="js/libs/dat.gui.min.js"></script>
 		<script src="gui.js"></script>
 		<script>
@@ -37,12 +36,12 @@
 
 			var objects = [];
 			var materials = [];
+			var road_materials = [];
 			var mouse = new THREE.Vector2();
 			var raycaster;
 			var gui;
 			var zone_type = 0;
 			var dragging = false;
-			var isShiftDown = false;
 			
 			init();
 			animate();
@@ -56,11 +55,21 @@
 				raycaster = new THREE.Raycaster();
 				zone_type = 0;
 				
+				renderer = new THREE.WebGLRenderer();
+				renderer.setClearColor(0xf0f0f0);
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				container.appendChild(renderer.domElement);
+				
 				// materials for zoning
 				materials.push(new THREE.MeshBasicMaterial( {color: 0xff2020, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
 				materials.push(new THREE.MeshBasicMaterial( {color: 0x2020ff, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
 				materials.push(new THREE.MeshBasicMaterial( {color: 0xffff20, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
 				materials.push(new THREE.MeshBasicMaterial( {color: 0x20ff20, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
+				
+				// materials for roads
+				var texture = THREE.ImageUtils.loadTexture( 'textures/road0.png' );
+				road_materials.push(new THREE.MeshBasicMaterial( { map: texture, needsUpdate: true } ));
 
 				// create grid
 				var city_size = 1000, cell_size = 50, grid_size = 20;
@@ -75,41 +84,33 @@
 						geometry.vertices.push(new THREE.Vector3(x + cell_size, 0, y + cell_size));
 						geometry.vertices.push(new THREE.Vector3(x, 0, y + cell_size));
 						
-						geometry.faces.push(new THREE.Face3(0, 1, 2, null, null, null));
-						geometry.faces.push(new THREE.Face3(0, 2, 3, null, null, null));
+						geometry.faces.push(new THREE.Face3(0, 1, 2, new THREE.Vector3(0, 1, 0)));
+						geometry.faces.push(new THREE.Face3(0, 2, 3, new THREE.Vector3(0, 1, 0)));
+						
+						geometry.faceVertexUvs[0].push([new THREE.Vector2(0, 0), new THREE.Vector2(1, 0), new THREE.Vector2(1, 1)]);
+						geometry.faceVertexUvs[0].push([new THREE.Vector2(0, 0), new THREE.Vector2(1, 1), new THREE.Vector2(0, 1)]);
 						
 						geometry.dynamic = true;
-						geometry.colorsNeedUpdate = true;
+						//geometry.colorsNeedUpdate = true;
+						
+						geometry.computeFaceNormals();
+						geometry.computeVertexNormals();
 						
 						var mesh = new THREE.Mesh(geometry, materials[3]);
+						//var mesh = new THREE.Mesh(geometry, road_materials[0]);
 						
 						objects.push(mesh);
 						scene.add(mesh);
 					}
 				}
 				
-				renderer = new THREE.CanvasRenderer();
-				renderer.setClearColor(0xf0f0f0);
-				renderer.setPixelRatio(window.devicePixelRatio);
-				renderer.setSize(window.innerWidth, window.innerHeight);
-				container.appendChild(renderer.domElement);
-				
 				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
-				camera.position.set(0, 900, 1000);
+				camera.position.set(0, 900, 0);
 				camera.lookAt(new THREE.Vector3());
-				
-				// create trackball
-				controls = new THREE.TrackballControls(camera, renderer.domElement);
-				controls.rotateSpeed = 1.0;
-				controls.zoomSpeed = 1.2;
-				controls.panSpeed = 0.2;
-				controls.addEventListener( 'change', render );
 				
 				renderer.domElement.addEventListener('mousedown', onDocumentMouseDown, false);
 				renderer.domElement.addEventListener('mousemove', onDocumentMouseMove, false);
 				renderer.domElement.addEventListener('mouseup', onDocumentMouseUp, false);
-				document.addEventListener('keydown', onDocumentKeyDown, false);
-				document.addEventListener('keyup', onDocumentKeyUp, false);
 				window.addEventListener('resize', onWindowResize, false);
 				window.addEventListener('zone_type_changed', onZoneTypeChanged);
 				
@@ -125,8 +126,6 @@
 			}
 
 			function onDocumentMouseDown(event) {
-				if (!isShiftDown) return;
-				
 				mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
 				mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
 
@@ -136,7 +135,11 @@
 				
 				if (intersects.length > 0) {
 					dragging = true;
-					intersects[0].object.material = materials[zone_type];
+					if (zone_type < 4) {
+						intersects[0].object.material = materials[zone_type];
+					} else if (zone_type == 4) {
+						intersects[0].object.material = road_materials[0];
+					}
 				}
 				
 				render();
@@ -161,18 +164,6 @@
 			
 			function onDocumentMouseUp(event) {
 				dragging = false;
-			}
-			
-			function onDocumentKeyDown(event) {
-				switch (event.keyCode) {
-					case 16: isShiftDown = true; break;
-				}
-			}
-
-			function onDocumentKeyUp(event) {
-				switch (event.keyCode) {
-					case 16: isShiftDown = false; break;
-				}
 			}
 			
 			function onZoneTypeChanged(event) {
