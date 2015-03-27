@@ -42,9 +42,103 @@
 			var gui;
 			var zone_type = 0;
 			var dragging = false;
+			var city_size = 1000, cell_size = 50, grid_size = 20;
+			var zones = [[]];
 			
+			var ZONE_TYPE_RES = 0;
+			var ZONE_TYPE_COM = 1;
+			var ZONE_TYPE_IND = 2;
+			var ZONE_TYPE_PARK = 3;
+			var ZONE_TYPE_ROAD = 4;
+
 			init();
 			animate();
+			
+			function world2grid(world_pt) {
+				var x = Math.floor(world_pt.x / cell_size + grid_size * 0.5);
+				var y = Math.floor(world_pt.y / cell_size + grid_size * 0.5);
+				return new THREE.Vector2(x, y);
+			}
+			
+			/**
+			 * add road at the specified location.
+			 */
+			function addRoad(pt) {
+				// neighbors in clockwise order
+				var ne = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+				
+				// update table for surrounding neighbors
+				var tab1 = [
+					[3, 1, 8, 3, 14, 1, 13, 7, 8, 9, 11, 11, 7, 13, 14, 9],
+					[4, 9, 2, 14, 4, 15, 2, 11, 8, 9, 10, 11, 10, 8, 14, 15],
+					[5, 1, 10, 1, 15, 5, 12, 7, 11, 9, 10, 11, 12, 7, 9, 15],
+					[6, 7, 2, 13, 2, 12, 6, 7, 8, 11, 10, 11, 12, 13, 8, 10]
+				];
+				
+				var neighbors = 0;
+				
+				for (var i = 0; i < 4; ++i) {
+					if (pt.x + ne[i][0] < 0 || pt.x + ne[i][0] >= grid_size) {
+						neighbors |= 1 << i;
+						continue;
+					}
+					if (pt.y + ne[i][1] < 0 || pt.y + ne[i][1] >= grid_size) {
+						neighbors |= 1 << i;;
+						continue;
+					}
+					if (zones[pt.y + ne[i][1]][pt.x + ne[i][0]].type != ZONE_TYPE_ROAD) {
+						continue;
+					}
+					
+					neighbors |= 1 << i;
+					
+					var cur_road_type = zones[pt.y + ne[i][1]][pt.x + ne[i][0]].road_type;
+					zones[pt.y + ne[i][1]][pt.x + ne[i][0]].road_type = tab1[i][cur_road_type];
+					zones[pt.y + ne[i][1]][pt.x + ne[i][0]].mesh.material = road_materials[tab1[i][cur_road_type]];
+				}
+				
+				// update table for this pt.
+				var tab2 = [0, 5, 6, 12, 3, 1, 13, 7, 4, 15, 2, 10, 14, 9, 8, 11];
+				zones[pt.y][pt.x].road_type = tab2[neighbors];
+				zones[pt.y][pt.x].mesh.material = road_materials[tab2[neighbors]];
+			}
+			
+			/**
+			 * remove road at the specified location.
+			 */
+			function removeRoad(pt) {
+				// neighbors in clockwise order
+				var ne = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+				
+				// update table for surrounding neighbors
+				var tab1 = [
+					[0, 5, 2, 0, 4, 5, 6, 12, 2, 15, 10, 10, 12, 6, 4, 15],
+					[0, 1, 6, 3, 0, 5, 6, 7, 13, 1, 12, 7, 12, 13, 3, 5],
+					[0, 3, 2, 3, 4, 0, 6, 13, 8, 14, 2, 8, 6, 13, 14, 4],
+					[0, 1, 4, 3, 4, 5, 0, 1, 14, 9, 15, 9, 5, 3, 14, 15]
+				];
+				
+				for (var i = 0; i < 4; ++i) {
+					if (pt.x + ne[i][0] < 0 || pt.x + ne[i][0] >= grid_size) {
+						continue;
+					}
+					if (pt.y + ne[i][1] < 0 || pt.y + ne[i][1] >= grid_size) {
+						continue;
+					}
+					if (zones[pt.y + ne[i][1]][pt.x + ne[i][0]].type != ZONE_TYPE_ROAD) {
+						continue;
+					}
+					
+					var cur_road_type = zones[pt.y + ne[i][1]][pt.x + ne[i][0]].road_type;
+					zones[pt.y + ne[i][1]][pt.x + ne[i][0]].road_type = tab1[i][cur_road_type];
+					zones[pt.y + ne[i][1]][pt.x + ne[i][0]].mesh.material = road_materials[tab1[i][cur_road_type]];
+				}
+			}
+			
+			function CreateZone(mesh, type) {
+				this.mesh = mesh;
+				this.type = type;
+			}
 			
 			function init() {
 				var gui = new ZoningGUI();
@@ -62,29 +156,30 @@
 				container.appendChild(renderer.domElement);
 				
 				// materials for zoning
-				materials.push(new THREE.MeshBasicMaterial( {color: 0xff2020, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
-				materials.push(new THREE.MeshBasicMaterial( {color: 0x2020ff, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
-				materials.push(new THREE.MeshBasicMaterial( {color: 0xffff20, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
-				materials.push(new THREE.MeshBasicMaterial( {color: 0x20ff20, overdarw: 0.5, needsUpdate: true, side: THREE.DoubleSide} ));
+				materials.push(new THREE.MeshBasicMaterial( {color: 0xff2020, overdarw: 0.5, needsUpdate: true} ));
+				materials.push(new THREE.MeshBasicMaterial( {color: 0x2020ff, overdarw: 0.5, needsUpdate: true} ));
+				materials.push(new THREE.MeshBasicMaterial( {color: 0xffff20, overdarw: 0.5, needsUpdate: true} ));
+				materials.push(new THREE.MeshBasicMaterial( {color: 0x20ff20, overdarw: 0.5, needsUpdate: true} ));
 				
 				// materials for roads
-				for (var i = 0; i <= 10; ++i) {
+				for (var i = 0; i <= 15; ++i) {
 					var texture = THREE.ImageUtils.loadTexture( 'textures/road' + i + '.png' );
-					road_materials.push(new THREE.MeshBasicMaterial( { map: texture, needsUpdate: true, side: THREE.DoubleSide } ));
+					road_materials.push(new THREE.MeshBasicMaterial( { map: texture, needsUpdate: true} ));
 				}
 
 				// create grid
-				var city_size = 1000, cell_size = 50, grid_size = 20;
 				for (var i = 0; i <= grid_size; ++i) {
+					zones.push([]);
+					
 					for (var j = 0; j <= grid_size; ++j) {
 						var x = j * cell_size - city_size * 0.5;
 						var y = i * cell_size - city_size * 0.5;
 						
 						var geometry = new THREE.Geometry();
-						geometry.vertices.push(new THREE.Vector3(x, 0, y));
-						geometry.vertices.push(new THREE.Vector3(x + cell_size, 0, y));
-						geometry.vertices.push(new THREE.Vector3(x + cell_size, 0, y + cell_size));
-						geometry.vertices.push(new THREE.Vector3(x, 0, y + cell_size));
+						geometry.vertices.push(new THREE.Vector3(x, y, 0));
+						geometry.vertices.push(new THREE.Vector3(x + cell_size, y, 0));
+						geometry.vertices.push(new THREE.Vector3(x + cell_size, y + cell_size, 0));
+						geometry.vertices.push(new THREE.Vector3(x, y + cell_size, 0));
 						
 						geometry.faces.push(new THREE.Face3(0, 1, 2, new THREE.Vector3(0, 1, 0)));
 						geometry.faces.push(new THREE.Face3(0, 2, 3, new THREE.Vector3(0, 1, 0)));
@@ -102,11 +197,13 @@
 						
 						objects.push(mesh);
 						scene.add(mesh);
+						
+						zones[i][j] = new CreateZone(mesh, 3);
 					}
 				}
 				
 				camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
-				camera.position.set(0, 1200, 0);
+				camera.position.set(0, 0, 1200);
 				camera.lookAt(new THREE.Vector3());
 				
 				renderer.domElement.addEventListener('mousedown', onDocumentMouseDown, false);
@@ -137,10 +234,14 @@
 				if (intersects.length > 0) {
 					dragging = true;
 					
-					if (zone_type < 4) {
+					var pt = world2grid(intersects[0].point);
+					if (zone_type != ZONE_TYPE_ROAD) {
 						intersects[0].object.material = materials[zone_type];
-					} else if (zone_type == 4) {
-						intersects[0].object.material = road_materials[0];
+						//removeRoad(pt);
+					} else if (zone_type == ZONE_TYPE_ROAD) {
+						zones[pt.y][pt.x].type = ZONE_TYPE_ROAD;
+						
+						addRoad(pt);
 					}
 				}
 				
@@ -158,10 +259,14 @@
 				var intersects = raycaster.intersectObjects(objects);
 				
 				if (intersects.length > 0) {
-					if (zone_type < 4) {
+					var pt = world2grid(intersects[0].point);
+					if (zone_type != ZONE_TYPE_ROAD) {
 						intersects[0].object.material = materials[zone_type];
-					} else if (zone_type == 4) {
-						intersects[0].object.material = road_materials[0];
+						//remvoeRoad(pt);
+					} else if (zone_type == ZONE_TYPE_ROAD) {
+						zones[pt.y][pt.x].type = ZONE_TYPE_ROAD;
+						
+						addRoad(pt);
 					}
 				}
 				
@@ -178,7 +283,6 @@
 			
 			function animate() {
 				requestAnimationFrame(animate);
-				controls.update();
 			}
 
 			function render() {
